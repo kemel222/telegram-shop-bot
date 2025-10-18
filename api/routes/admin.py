@@ -116,10 +116,6 @@ async def verify_payment(
     if request.is_approved:
         await OrderService.update_payment_status(session, order_id, "paid")
         
-        # Обрабатываем реферальный бонус
-        from services.referral_service import ReferralService
-        await ReferralService.process_referral_bonus(session, order)
-        
         return {"message": "Payment approved", "status": "paid"}
     else:
         await OrderService.cancel_order(session, order_id)

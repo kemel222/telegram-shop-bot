@@ -82,6 +82,7 @@ class Product(Base):
     image_url = Column(String(500), nullable=True)
     quantity = Column(Integer, default=0)  # Количество на складе
     is_available = Column(Boolean, default=True)
+    has_variants = Column(Boolean, default=False)  # Есть ли варианты (вкусы)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -90,6 +91,24 @@ class Product(Base):
     cart_items = relationship("CartItem", back_populates="product")
     order_items = relationship("OrderItem", back_populates="product")
     favorites = relationship("Favorite", back_populates="product")
+    variants = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")
+
+
+class ProductVariant(Base):
+    __tablename__ = "product_variants"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    name = Column(String(255), nullable=False)  # Название вкуса/варианта
+    price = Column(Float, nullable=True)  # Цена варианта (если отличается от основной)
+    quantity = Column(Integer, default=0)  # Количество конкретного варианта
+    is_available = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    product = relationship("Product", back_populates="variants")
+    cart_items = relationship("CartItem", back_populates="variant")
+    order_items = relationship("OrderItem", back_populates="variant")
 
 
 class Cart(Base):
@@ -111,12 +130,14 @@ class CartItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     cart_id = Column(Integer, ForeignKey("carts.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    variant_id = Column(Integer, ForeignKey("product_variants.id"), nullable=True)  # Вариант товара
     quantity = Column(Integer, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     cart = relationship("Cart", back_populates="items")
     product = relationship("Product", back_populates="cart_items")
+    variant = relationship("ProductVariant", back_populates="cart_items")
 
 
 class Order(Base):
@@ -166,12 +187,15 @@ class OrderItem(Base):
     id = Column(Integer, primary_key=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    variant_id = Column(Integer, ForeignKey("product_variants.id"), nullable=True)  # Вариант товара
     quantity = Column(Integer, nullable=False)
     price = Column(Float, nullable=False)  # Цена на момент заказа
+    variant_name = Column(String(255), nullable=True)  # Название варианта на момент заказа
     
     # Relationships
     order = relationship("Order", back_populates="items")
     product = relationship("Product", back_populates="order_items")
+    variant = relationship("ProductVariant", back_populates="order_items")
 
 
 class PromoCode(Base):

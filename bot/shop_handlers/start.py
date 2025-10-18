@@ -36,8 +36,6 @@ async def cmd_start(message: Message):
 🎁 Получайте кешбек с каждой покупки:
 • На POD-системы: {settings.CASHBACK_PODS_PERCENT}%
 • На все остальное: {settings.CASHBACK_DEFAULT_PERCENT}%
-
-💻 Разработано @{settings.DEVELOPER_USERNAME}
 """
         
         keyboard = get_main_keyboard()
@@ -75,8 +73,6 @@ async def cmd_help(message: Message):
 • На POD-системы: {settings.CASHBACK_PODS_PERCENT}%
 • На все остальное: {settings.CASHBACK_DEFAULT_PERCENT}%
 • Кешбек начисляется автоматически после выполнения заказа!
-
-💻 Разработано [@{settings.DEVELOPER_USERNAME}]({settings.DEVELOPER_LINK})
 """
     
     await message.answer(help_text, parse_mode="Markdown")
@@ -95,8 +91,6 @@ async def contact_manager(message: Message):
 • Любых других вопросов
 
 Мы всегда на связи! 😊
-
-💻 Разработано @{settings.DEVELOPER_USERNAME}
 """
     
     await message.answer(manager_text)
@@ -125,8 +119,6 @@ async def show_profile(message: Message):
 💳 Кешбек баланс: {user.cashback_balance}₽
 
 {cashback_info}
-
-💻 Разработано @{settings.DEVELOPER_USERNAME}
 
 Используйте /help для получения справки
 """

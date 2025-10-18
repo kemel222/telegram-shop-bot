@@ -80,10 +80,12 @@ async def cmd_start(message: Message):
 /promo_list - Список промокодов
 
 📊 *Статистика:*
-/stats - Общая статистика
+/stats - Расширенная статистика
+/stock_report - Отчет по остаткам
 /users_stats - Статистика пользователей
 
-💻 Разработано @{settings.DEVELOPER_USERNAME}
+📦 *Управление остатками:*
+/update_stock - Обновить остатки товара
 """
     
     await message.answer(admin_text, parse_mode="Markdown")
@@ -254,8 +256,7 @@ async def complete_order(callback: CallbackQuery):
 Спасибо за покупку! Будем рады видеть вас снова.
 {cashback_message}
 
-💬 Оставьте отзыв или задайте вопрос: @{settings.MANAGER_USERNAME}
-💻 Разработано @{settings.DEVELOPER_USERNAME}"""
+💬 Оставьте отзыв или задайте вопрос: @{settings.MANAGER_USERNAME}"""
                 
                 await shop_bot.send_message(
                     order.user.telegram_id,
@@ -362,15 +363,16 @@ async def process_promo_value(message: Message, state: FSMContext):
 
 @router.message(Command("stats"))
 async def show_stats(message: Message):
-    """Показать статистику"""
+    """Показать расширенную статистику"""
     if not is_admin(message.from_user.id):
         await message.answer("❌ У вас нет прав администратора")
         return
     
     async with async_session_maker() as session:
-        from sqlalchemy import select, func
-        from database.models import User, Order, Product
+        from sqlalchemy import select, func, and_
+        from database.models import User, Order, Product, ProductVariant, Category, OrderStatus
         
+        # Основная статистика
         result = await session.execute(select(func.count(User.id)))
         total_users = result.scalar()
         
@@ -383,15 +385,80 @@ async def show_stats(message: Message):
         result = await session.execute(select(func.count(Product.id)))
         total_products = result.scalar()
         
+        result = await session.execute(select(func.count(ProductVariant.id)))
+        total_variants = result.scalar()
+        
+        result = await session.execute(select(func.count(Category.id)))
+        total_categories = result.scalar()
+        
+        # Статистика по статусам заказов
+        result = await session.execute(select(func.count(Order.id)).where(Order.status == OrderStatus.PENDING))
+        pending_orders = result.scalar()
+        
+        result = await session.execute(select(func.count(Order.id)).where(Order.status == OrderStatus.COMPLETED))
+        completed_orders = result.scalar()
+        
+        result = await session.execute(select(func.count(Order.id)).where(Order.status == OrderStatus.CANCELLED))
+        cancelled_orders = result.scalar()
+        
+        # Статистика по товарам
+        result = await session.execute(select(func.count(Product.id)).where(Product.is_available == True))
+        available_products = result.scalar()
+        
+        result = await session.execute(select(func.sum(Product.quantity)))
+        total_stock = result.scalar() or 0
+        
+        # Статистика по вариантам
+        result = await session.execute(select(func.count(ProductVariant.id)).where(ProductVariant.is_available == True))
+        available_variants = result.scalar()
+        
+        result = await session.execute(select(func.sum(ProductVariant.quantity)))
+        total_variant_stock = result.scalar() or 0
+        
+        # Топ категории по количеству товаров
+        result = await session.execute(
+            select(Category.name, func.count(Product.id).label('product_count'))
+            .join(Product)
+            .group_by(Category.id, Category.name)
+            .order_by(func.count(Product.id).desc())
+            .limit(3)
+        )
+        top_categories = result.fetchall()
+        
         stats_text = f"""
-📊 *Статистика Hotspot*
+📊 *РАСШИРЕННАЯ СТАТИСТИКА HOTSPOT*
 
-👥 Всего пользователей: {total_users}
-📦 Всего заказов: {total_orders}
-💰 Общая выручка: {total_revenue}₽
-🛍 Товаров в каталоге: {total_products}
+👥 *Пользователи:*
+• Всего пользователей: {total_users}
 
-💻 Разработано @{settings.DEVELOPER_USERNAME}
+📦 *Заказы:*
+• Всего заказов: {total_orders}
+• Ожидают подтверждения: {pending_orders}
+• Завершены: {completed_orders}
+• Отменены: {cancelled_orders}
+• Общая выручка: {total_revenue:,.0f}₽
+
+🛍 *Товары:*
+• Всего товаров: {total_products}
+• Доступно: {available_products}
+• Всего вариантов: {total_variants}
+• Доступно вариантов: {available_variants}
+• Общий остаток: {total_stock + total_variant_stock} шт.
+
+📁 *Категории:*
+• Всего категорий: {total_categories}
+
+🏆 *Топ категории по товарам:*
+"""
+        
+        for i, (cat_name, count) in enumerate(top_categories, 1):
+            stats_text += f"• {i}. {cat_name}: {count} товаров\n"
+        
+        stats_text += f"""
+💡 *Рекомендации:*
+• Пополнить остатки в категориях с малым количеством товаров
+• Обработать {pending_orders} ожидающих заказов
+• Проанализировать причины отмены {cancelled_orders} заказов
 """
         
         await message.answer(stats_text, parse_mode="Markdown")
@@ -715,6 +782,80 @@ async def delete_product(message: Message):
         return
     
     await message.answer("🗑 Введите ID товара для удаления:")
+
+
+@router.message(Command("update_stock"))
+async def update_stock_start(message: Message, state: FSMContext):
+    """Обновить остатки товара"""
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ У вас нет прав администратора")
+        return
+    
+    await message.answer("🆔 Введите ID товара для обновления остатков:")
+    await state.set_state(AdminStates.waiting_for_edit_product_id)
+
+
+@router.message(Command("stock_report"))
+async def stock_report(message: Message):
+    """Отчет по остаткам"""
+    if not is_admin(message.from_user.id):
+        await message.answer("❌ У вас нет прав администратора")
+        return
+    
+    async with async_session_maker() as session:
+        from sqlalchemy import select, and_
+        from database.models import Product, ProductVariant, Category
+        
+        # Товары с низким остатком
+        result = await session.execute(
+            select(Product.name, Product.quantity, Category.name.label('category_name'))
+            .join(Category)
+            .where(and_(Product.quantity < 10, Product.quantity > 0))
+            .order_by(Product.quantity.asc())
+        )
+        low_stock = result.fetchall()
+        
+        # Товары без остатка
+        result = await session.execute(
+            select(Product.name, Category.name.label('category_name'))
+            .join(Category)
+            .where(Product.quantity == 0)
+        )
+        out_of_stock = result.fetchall()
+        
+        # Варианты с низким остатком
+        result = await session.execute(
+            select(Product.name, ProductVariant.name.label('variant_name'), ProductVariant.quantity)
+            .join(Product)
+            .where(and_(ProductVariant.quantity < 5, ProductVariant.quantity > 0))
+            .order_by(ProductVariant.quantity.asc())
+        )
+        low_variant_stock = result.fetchall()
+        
+        report_text = "📦 *ОТЧЕТ ПО ОСТАТКАМ*\n\n"
+        
+        if low_stock:
+            report_text += "⚠️ *Товары с низким остатком (< 10 шт.):*\n"
+            for product_name, quantity, category_name in low_stock:
+                report_text += f"• {product_name} ({category_name}): {quantity} шт.\n"
+            report_text += "\n"
+        
+        if out_of_stock:
+            report_text += "❌ *Товары без остатка:*\n"
+            for product_name, category_name in out_of_stock:
+                report_text += f"• {product_name} ({category_name})\n"
+            report_text += "\n"
+        
+        if low_variant_stock:
+            report_text += "⚠️ *Варианты с низким остатком (< 5 шт.):*\n"
+            for product_name, variant_name, quantity in low_variant_stock:
+                report_text += f"• {product_name} - {variant_name}: {quantity} шт.\n"
+            report_text += "\n"
+        
+        if not low_stock and not out_of_stock and not low_variant_stock:
+            report_text += "✅ Все товары в наличии!"
+        
+        await message.answer(report_text, parse_mode="Markdown")
 
 
 # ============== УПРАВЛЕНИЕ КЕШБЕКОМ ==============

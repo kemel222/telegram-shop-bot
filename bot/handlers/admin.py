@@ -7,7 +7,6 @@ from services.order_service import OrderService
 from services.product_service import ProductService
 from services.promo_service import PromoService
 from services.user_service import UserService
-from services.referral_service import ReferralService
 from database.models import OrderStatus, PromoCodeType
 from database.database import async_session_maker
 from config import settings
@@ -82,9 +81,6 @@ async def approve_payment(callback: CallbackQuery):
         order = await OrderService.update_payment_status(session, order_id, "paid")
         
         if order:
-            # Обрабатываем реферальный бонус
-            await ReferralService.process_referral_bonus(session, order)
-            
             # Уведомляем пользователя
             try:
                 await callback.bot.send_message(

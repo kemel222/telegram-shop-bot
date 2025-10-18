@@ -19,6 +19,17 @@ class CategoryResponse(BaseModel):
         from_attributes = True
 
 
+class ProductVariantResponse(BaseModel):
+    id: int
+    name: str
+    price: Optional[float]
+    quantity: int
+    is_available: bool
+    
+    class Config:
+        from_attributes = True
+
+
 class ProductResponse(BaseModel):
     id: int
     category_id: int
@@ -28,10 +39,70 @@ class ProductResponse(BaseModel):
     image_url: Optional[str]
     quantity: int
     is_available: bool
+    has_variants: bool
     is_favorite: bool = False
+    variants: List[ProductVariantResponse] = []
     
     class Config:
         from_attributes = True
+
+
+@router.get("/public", response_model=List[ProductResponse])
+async def get_public_products(session: AsyncSession = Depends(get_db)):
+    """Получить все товары (публичный доступ)"""
+    products = await ProductService.get_all_products(session)
+    
+    products_response = []
+    for product in products:
+        variants = await ProductService.get_product_variants(session, product.id)
+        
+        product_dict = {
+            "id": product.id,
+            "category_id": product.category_id,
+            "name": product.name,
+            "description": product.description,
+            "price": product.price,
+            "image_url": product.image_url,
+            "quantity": product.quantity,
+            "is_available": product.is_available,
+            "has_variants": product.has_variants,
+            "is_favorite": False,  # Для публичного доступа всегда False
+            "variants": variants
+        }
+        products_response.append(product_dict)
+    
+    return products_response
+
+
+@router.get("", response_model=List[ProductResponse])
+async def get_all_products(
+    session: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Получить все товары"""
+    products = await ProductService.get_all_products(session)
+    
+    products_response = []
+    for product in products:
+        is_favorite = await ProductService.is_in_favorites(session, user.id, product.id)
+        variants = await ProductService.get_product_variants(session, product.id)
+        
+        product_dict = {
+            "id": product.id,
+            "category_id": product.category_id,
+            "name": product.name,
+            "description": product.description,
+            "price": product.price,
+            "image_url": product.image_url,
+            "quantity": product.quantity,
+            "is_available": product.is_available,
+            "has_variants": product.has_variants,
+            "is_favorite": is_favorite,
+            "variants": variants
+        }
+        products_response.append(product_dict)
+    
+    return products_response
 
 
 @router.get("/categories", response_model=List[CategoryResponse])
@@ -59,10 +130,12 @@ async def get_category_products(
     """Получить товары категории"""
     products = await ProductService.get_products_by_category(session, category_id)
     
-    # Проверяем, какие товары в избранном
+    # Проверяем, какие товары в избранном и загружаем варианты
     products_response = []
     for product in products:
         is_favorite = await ProductService.is_in_favorites(session, user.id, product.id)
+        variants = await ProductService.get_product_variants(session, product.id)
+        
         product_dict = {
             "id": product.id,
             "category_id": product.category_id,
@@ -72,7 +145,9 @@ async def get_category_products(
             "image_url": product.image_url,
             "quantity": product.quantity,
             "is_available": product.is_available,
-            "is_favorite": is_favorite
+            "has_variants": product.has_variants,
+            "is_favorite": is_favorite,
+            "variants": variants
         }
         products_response.append(product_dict)
     
@@ -91,6 +166,7 @@ async def get_product(
         raise HTTPException(status_code=404, detail="Product not found")
     
     is_favorite = await ProductService.is_in_favorites(session, user.id, product.id)
+    variants = await ProductService.get_product_variants(session, product.id)
     
     return {
         "id": product.id,
@@ -101,7 +177,9 @@ async def get_product(
         "image_url": product.image_url,
         "quantity": product.quantity,
         "is_available": product.is_available,
-        "is_favorite": is_favorite
+        "has_variants": product.has_variants,
+        "is_favorite": is_favorite,
+        "variants": variants
     }
 
 
@@ -117,6 +195,8 @@ async def search_products(
     products_response = []
     for product in products:
         is_favorite = await ProductService.is_in_favorites(session, user.id, product.id)
+        variants = await ProductService.get_product_variants(session, product.id)
+        
         product_dict = {
             "id": product.id,
             "category_id": product.category_id,
@@ -126,7 +206,9 @@ async def search_products(
             "image_url": product.image_url,
             "quantity": product.quantity,
             "is_available": product.is_available,
-            "is_favorite": is_favorite
+            "has_variants": product.has_variants,
+            "is_favorite": is_favorite,
+            "variants": variants
         }
         products_response.append(product_dict)
     
@@ -169,6 +251,8 @@ async def get_favorites(
     
     products_response = []
     for product in products:
+        variants = await ProductService.get_product_variants(session, product.id)
+        
         product_dict = {
             "id": product.id,
             "category_id": product.category_id,
@@ -178,7 +262,9 @@ async def get_favorites(
             "image_url": product.image_url,
             "quantity": product.quantity,
             "is_available": product.is_available,
-            "is_favorite": True
+            "has_variants": product.has_variants,
+            "is_favorite": True,
+            "variants": variants
         }
         products_response.append(product_dict)
     

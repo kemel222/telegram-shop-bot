@@ -5,6 +5,22 @@ from database.models import User
 
 class UserService:
     @staticmethod
+    async def create_user(session: AsyncSession, telegram_id: int) -> User:
+        """Создать нового пользователя"""
+        new_user = User(
+            telegram_id=telegram_id,
+            username=None,
+            first_name=None,
+            balance=0.0,
+            cashback_balance=0.0
+        )
+        
+        session.add(new_user)
+        await session.commit()
+        await session.refresh(new_user)
+        return new_user
+    
+    @staticmethod
     async def get_or_create_user(
         session: AsyncSession,
         telegram_id: int,

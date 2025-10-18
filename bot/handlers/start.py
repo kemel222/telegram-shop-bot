@@ -13,20 +13,12 @@ router = Router()
 async def cmd_start(message: Message):
     """Обработка команды /start"""
     async with async_session_maker() as session:
-        # Проверяем, есть ли реферальный код в команде
-        referral_code = None
-        if message.text and len(message.text.split()) > 1:
-            args = message.text.split()[1]
-            if args.startswith("ref_"):
-                referral_code = args[4:]
-        
         # Создаем или получаем пользователя
         user = await UserService.get_or_create_user(
             session,
             message.from_user.id,
             message.from_user.username,
-            message.from_user.first_name,
-            referral_code
+            message.from_user.first_name
         )
         
         # Проверяем, является ли пользователь администратором
@@ -41,14 +33,11 @@ async def cmd_start(message: Message):
 • Добавлять товары в корзину и избранное
 • Оформлять заказы с доставкой или самовывозом
 • Использовать промокоды и получать скидки
-• Приглашать друзей и получать бонусы
+• Получать кешбек с каждой покупки
 
 💰 Ваш баланс: {user.balance}₽
-🎁 Ваш реферальный код: {user.referral_code}
+💵 Кешбек баланс: {user.cashback_balance}₽
 """
-        
-        if referral_code and user.referred_by_id:
-            welcome_text += f"\n🎉 Вы были приглашены по реферальной ссылке! При первой покупке вы получите скидку {settings.REFERRAL_FIRST_PURCHASE_DISCOUNT}%!"
         
         if is_admin:
             welcome_text += "\n\n⚙️ У вас есть права администратора"
@@ -62,7 +51,7 @@ async def cmd_start(message: Message):
 @router.message(Command("help"))
 async def cmd_help(message: Message):
     """Обработка команды /help"""
-    help_text = """
+    help_text = f"""
 📖 Помощь по использованию бота:
 
 🛍 *Покупки*:
@@ -85,10 +74,12 @@ async def cmd_help(message: Message):
 • Вводите промокод при оформлении заказа
 • Промокоды дают скидку или пополняют баланс
 
-👥 *Реферальная программа*:
-• Приглашайте друзей по своей реферальной ссылке
-• Они получают {settings.REFERRAL_FIRST_PURCHASE_DISCOUNT}% скидку на первую покупку
-• Вы получаете {settings.REFERRAL_BONUS_PERCENT}% от их первой покупки на баланс
+💰 *Кешбек программа*:
+• Получайте {settings.CASHBACK_PODS_PERCENT}% кешбек на "поды"
+• {settings.CASHBACK_DEFAULT_PERCENT}% кешбек на остальные товары
+• Кешбек начисляется после завершения заказа
+
+👨‍💻 *Разработано*: @{settings.DEVELOPER_USERNAME}
 
 По всем вопросам обращайтесь к администратору.
 """
@@ -106,6 +97,9 @@ async def show_profile(message: Message):
             await message.answer("❌ Пользователь не найден. Используйте /start")
             return
         
+        from services.cashback_service import CashbackService
+        cashback_info = await CashbackService.format_cashback_info(session, user)
+        
         profile_text = f"""
 👤 *Ваш профиль*
 
@@ -113,8 +107,11 @@ async def show_profile(message: Message):
 👤 Имя: {user.first_name or 'Не указано'}
 📱 Телефон: {user.phone or 'Не указан'}
 💰 Баланс: {user.balance}₽
+💵 Кешбек баланс: {user.cashback_balance}₽
 
-🎁 Реферальный код: `{user.referral_code}`
+{cashback_info}
+
+👨‍💻 *Разработано*: @{settings.DEVELOPER_USERNAME}
 
 Используйте /help для получения справки
 """
@@ -122,9 +119,9 @@ async def show_profile(message: Message):
         await message.answer(profile_text, parse_mode="Markdown")
 
 
-@router.message(F.text == "🎁 Реферальная программа")
-async def show_referral_program(message: Message):
-    """Показать информацию о реферальной программе"""
+@router.message(F.text == "💰 Кешбек")
+async def show_cashback_program(message: Message):
+    """Показать информацию о программе кешбека"""
     async with async_session_maker() as session:
         user = await UserService.get_user_by_telegram_id(session, message.from_user.id)
         
@@ -132,8 +129,8 @@ async def show_referral_program(message: Message):
             await message.answer("❌ Пользователь не найден. Используйте /start")
             return
         
-        from services.referral_service import ReferralService
-        referral_info = await ReferralService.format_referral_info(session, user)
+        from services.cashback_service import CashbackService
+        cashback_info = await CashbackService.format_cashback_info(session, user)
         
-        await message.answer(referral_info, parse_mode="Markdown")
+        await message.answer(cashback_info, parse_mode="Markdown")
 

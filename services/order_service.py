@@ -1,12 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database.models import (
-    Order, OrderItem, OrderStatus, DeliveryType, PaymentMethod,
-    Product, User, CartItem, Cart
+    Order, OrderItem, Cart, CartItem, Product, ProductVariant,
+    DeliveryType, PaymentMethod, OrderStatus
 )
-from services.cart_service import CartService
 from services.product_service import ProductService
-from typing import List, Optional, Dict
+from typing import List, Optional
+from datetime import datetime
 from config import settings
 
 
@@ -25,35 +25,64 @@ class OrderService:
         discount: float = 0.0
     ) -> Optional[Order]:
         """Создать заказ из корзины"""
-        # Получаем товары из корзины
-        cart_items = await CartService.get_cart_items(session, user_id)
+        
+        # Получаем корзину пользователя
+        cart = await session.execute(
+            select(Cart).where(Cart.user_id == user_id)
+        )
+        cart = cart.scalar_one_or_none()
+        
+        if not cart:
+            return None
+        
+        # Получаем товары корзины
+        cart_items = await session.execute(
+            select(CartItem).where(CartItem.cart_id == cart.id)
+        )
+        cart_items = cart_items.scalars().all()
         
         if not cart_items:
             return None
         
         # Рассчитываем стоимость
         subtotal = 0.0
-        order_items_data = []
+        delivery_cost = 0.0
         
+        if delivery_type == DeliveryType.DELIVERY:
+            delivery_cost = settings.DELIVERY_PRICE
+        
+        # Проверяем доступность товаров и рассчитываем стоимость
+        order_items_data = []
         for cart_item in cart_items:
             product = await ProductService.get_product_by_id(session, cart_item.product_id)
+            if not product or not product.is_available:
+                return None
             
-            if not product or not product.is_available or product.quantity < cart_item.quantity:
-                return None  # Товар недоступен
+            # Определяем цену и доступность
+            price = product.price
+            available_quantity = product.quantity
             
-            item_total = product.price * cart_item.quantity
-            subtotal += item_total
+            if cart_item.variant_id:
+                variant = await ProductService.get_variant_by_id(session, cart_item.variant_id)
+                if not variant or not variant.is_available:
+                    return None
+                
+                price = variant.price or product.price
+                available_quantity = variant.quantity
+            
+            if available_quantity < cart_item.quantity:
+                return None
+            
+            subtotal += price * cart_item.quantity
             
             order_items_data.append({
-                'product': product,
+                'product_id': product.id,
+                'variant_id': cart_item.variant_id,
                 'quantity': cart_item.quantity,
-                'price': product.price
+                'price': price,
+                'variant_name': variant.name if cart_item.variant_id and variant else None
             })
         
-        # Добавляем стоимость доставки
-        delivery_cost = settings.DELIVERY_PRICE if delivery_type == DeliveryType.DELIVERY else 0.0
-        
-        # Рассчитываем итоговую сумму
         total = subtotal + delivery_cost - discount
         
         # Создаем заказ
@@ -76,29 +105,39 @@ class OrderService:
         session.add(order)
         await session.flush()  # Получаем ID заказа
         
-        # Создаем элементы заказа и списываем товары
+        # Создаем элементы заказа
         for item_data in order_items_data:
             order_item = OrderItem(
                 order_id=order.id,
-                product_id=item_data['product'].id,
+                product_id=item_data['product_id'],
+                variant_id=item_data['variant_id'],
                 quantity=item_data['quantity'],
-                price=item_data['price']
+                price=item_data['price'],
+                variant_name=item_data['variant_name']
             )
             session.add(order_item)
+        
+        # Уменьшаем количество товаров на складе
+        for cart_item in cart_items:
+            if cart_item.variant_id:
+                success = await ProductService.decrease_variant_quantity(
+                    session, cart_item.variant_id, cart_item.quantity
+                )
+            else:
+                success = await ProductService.decrease_quantity(
+                    session, cart_item.product_id, cart_item.quantity
+                )
             
-            # Списываем товар со склада
-            await ProductService.decrease_quantity(
-                session,
-                item_data['product'].id,
-                item_data['quantity']
-            )
+            if not success:
+                # Откатываем изменения
+                await session.rollback()
+                return None
         
         # Очищаем корзину
-        await CartService.clear_cart(session, user_id)
+        for cart_item in cart_items:
+            await session.delete(cart_item)
         
         await session.commit()
-        await session.refresh(order)
-        
         return order
     
     @staticmethod
@@ -113,7 +152,8 @@ class OrderService:
     async def get_user_orders(session: AsyncSession, user_id: int) -> List[Order]:
         """Получить все заказы пользователя"""
         result = await session.execute(
-            select(Order).where(Order.user_id == user_id).order_by(Order.created_at.desc())
+            select(Order).where(Order.user_id == user_id)
+            .order_by(Order.created_at.desc())
         )
         return result.scalars().all()
     
@@ -126,42 +166,8 @@ class OrderService:
         return result.scalars().all()
     
     @staticmethod
-    async def update_order_status(
-        session: AsyncSession,
-        order_id: int,
-        status: OrderStatus
-    ) -> Optional[Order]:
-        """Обновить статус заказа"""
-        order = await OrderService.get_order_by_id(session, order_id)
-        
-        if order:
-            order.status = status
-            await session.commit()
-            await session.refresh(order)
-        
-        return order
-    
-    @staticmethod
-    async def update_payment_status(
-        session: AsyncSession,
-        order_id: int,
-        payment_status: str
-    ) -> Optional[Order]:
-        """Обновить статус оплаты"""
-        order = await OrderService.get_order_by_id(session, order_id)
-        
-        if order:
-            order.payment_status = payment_status
-            if payment_status == "paid":
-                order.status = OrderStatus.PAID
-            await session.commit()
-            await session.refresh(order)
-        
-        return order
-    
-    @staticmethod
     async def cancel_order(session: AsyncSession, order_id: int) -> bool:
-        """Отменить заказ и вернуть товары на склад"""
+        """Отменить заказ"""
         order = await OrderService.get_order_by_id(session, order_id)
         
         if not order or order.status in [OrderStatus.COMPLETED, OrderStatus.CANCELLED]:
@@ -169,91 +175,43 @@ class OrderService:
         
         # Возвращаем товары на склад
         order_items = await OrderService.get_order_items(session, order_id)
+        
         for item in order_items:
-            await ProductService.increase_quantity(session, item.product_id, item.quantity)
+            if item.variant_id:
+                await ProductService.increase_variant_quantity(
+                    session, item.variant_id, item.quantity
+                )
+            else:
+                await ProductService.increase_quantity(
+                    session, item.product_id, item.quantity
+                )
         
-        # Если оплата была с баланса, возвращаем средства
-        if order.payment_method == PaymentMethod.BALANCE and order.payment_status == "paid":
-            user = await session.execute(
-                select(User).where(User.id == order.user_id)
-            )
-            user = user.scalar_one_or_none()
-            if user:
-                user.balance += order.total
-        
+        # Обновляем статус заказа
         order.status = OrderStatus.CANCELLED
         await session.commit()
         
         return True
     
     @staticmethod
-    async def get_all_pending_orders(session: AsyncSession) -> List[Order]:
-        """Получить все заказы, ожидающие обработки"""
-        result = await session.execute(
-            select(Order).where(
-                Order.status.in_([OrderStatus.PENDING, OrderStatus.PAYMENT_PENDING])
-            ).order_by(Order.created_at.desc())
-        )
-        return result.scalars().all()
+    async def update_payment_status(session: AsyncSession, order_id: int, status: str) -> bool:
+        """Обновить статус оплаты"""
+        order = await OrderService.get_order_by_id(session, order_id)
+        
+        if not order:
+            return False
+        
+        order.payment_status = status
+        await session.commit()
+        return True
     
     @staticmethod
-    async def format_order_info(session: AsyncSession, order: Order) -> str:
-        """Форматировать информацию о заказе для отображения"""
-        order_items = await OrderService.get_order_items(session, order.id)
+    async def update_order_status(session: AsyncSession, order_id: int, status: OrderStatus) -> bool:
+        """Обновить статус заказа"""
+        order = await OrderService.get_order_by_id(session, order_id)
         
-        items_text = ""
-        for item in order_items:
-            product = await ProductService.get_product_by_id(session, item.product_id)
-            if product:
-                items_text += f"• {product.name} x{item.quantity} = {item.price * item.quantity}₽\n"
+        if not order:
+            return False
         
-        delivery_text = ""
-        if order.delivery_type == DeliveryType.DELIVERY:
-            delivery_text = f"📦 Доставка: {order.delivery_address}\nСтоимость доставки: {order.delivery_cost}₽"
-        elif order.delivery_type == DeliveryType.PICKUP_CENTER:
-            delivery_text = f"🏢 Самовывоз из Центра\nВремя: {order.delivery_time_slot}"
-        elif order.delivery_type == DeliveryType.PICKUP_TC:
-            delivery_text = f"🏬 Самовывоз из ТЦ\nВремя: {order.delivery_time_slot}"
-        
-        payment_text = {
-            PaymentMethod.SBP_ONLINE: "💳 СБП онлайн",
-            PaymentMethod.SBP_ON_RECEIPT: "💳 СБП при получении",
-            PaymentMethod.CASH: "💵 Наличными",
-            PaymentMethod.BALANCE: "💰 Баланс сайта"
-        }.get(order.payment_method, "Неизвестно")
-        
-        status_text = {
-            OrderStatus.PENDING: "⏳ Ожидает подтверждения",
-            OrderStatus.PAYMENT_PENDING: "💳 Ожидает оплаты",
-            OrderStatus.PAID: "✅ Оплачен",
-            OrderStatus.PROCESSING: "🔄 В обработке",
-            OrderStatus.READY: "📦 Готов к выдаче",
-            OrderStatus.COMPLETED: "✅ Завершен",
-            OrderStatus.CANCELLED: "❌ Отменен"
-        }.get(order.status, "Неизвестно")
-        
-        info = f"""
-📋 Заказ #{order.id}
-Статус: {status_text}
-
-👤 Клиент: {order.customer_name}
-📱 Телефон: {order.customer_phone}
-
-🛍 Товары:
-{items_text}
-Сумма товаров: {order.subtotal}₽
-
-{delivery_text}
-
-💰 Оплата: {payment_text}
-"""
-        
-        if order.discount > 0:
-            info += f"🎁 Скидка: {order.discount}₽\n"
-        if order.promo_code_used:
-            info += f"🎟 Промокод: {order.promo_code_used}\n"
-        
-        info += f"\n💵 Итого: {order.total}₽"
-        
-        return info
-
+        order.status = status
+        await session.commit()
+        return True

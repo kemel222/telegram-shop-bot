@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.dependencies import get_db, get_current_user
 from services.order_service import OrderService
 from services.promo_service import PromoService
-from services.referral_service import ReferralService
 from database.models import User, DeliveryType, PaymentMethod
 from pydantic import BaseModel
 from typing import List, Optional
@@ -61,11 +60,6 @@ async def create_order(
     
     discount = 0.0
     
-    # Применяем реферальную скидку для первой покупки
-    if user.is_first_purchase and user.referred_by_id:
-        referral_discount = await ReferralService.apply_referral_discount(cart_total, user)
-        discount += referral_discount
-    
     # Применяем промокод, если указан
     if request.promo_code:
         is_valid, message, promo_discount = await PromoService.apply_promo_code(
@@ -118,9 +112,7 @@ async def create_order(
         # Обновляем статус оплаты
         await OrderService.update_payment_status(session, order.id, "paid")
     
-    # Обрабатываем реферальный бонус, если заказ оплачен
-    if order.payment_status == "paid":
-        await ReferralService.process_referral_bonus(session, order)
+    # Кешбек будет начислен администратором при подтверждении заказа
     
     return {
         "id": order.id,

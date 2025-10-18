@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.database import async_session_maker
@@ -44,34 +44,32 @@ def decode_access_token(token: str) -> dict:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    x_telegram_user_id: str = Header(..., alias="X-Telegram-User-ID"),
     session: AsyncSession = Depends(get_db)
 ) -> User:
-    """Получить текущего пользователя из токена"""
-    token = credentials.credentials
-    payload = decode_access_token(token)
+    """Получить текущего пользователя из Telegram"""
+    try:
+        user_id = int(x_telegram_user_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user ID")
     
-    user = await UserService.get_user_by_id(session, payload["user_id"])
-    
+    user = await UserService.get_user_by_telegram_id(session, user_id)
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
+        # Создаем пользователя, если его нет
+        user = await UserService.create_user(session, user_id)
     
     return user
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    x_telegram_user_id: Optional[str] = Header(None, alias="X-Telegram-User-ID"),
     session: AsyncSession = Depends(get_db)
 ) -> Optional[User]:
     """Получить текущего пользователя (опционально)"""
-    if not credentials:
+    if not x_telegram_user_id:
         return None
     
     try:
-        return await get_current_user(credentials, session)
+        return await get_current_user(x_telegram_user_id, session)
     except HTTPException:
         return None
-

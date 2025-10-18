@@ -11,7 +11,6 @@ from services.cart_service import CartService
 from services.order_service import OrderService
 from services.user_service import UserService
 from services.promo_service import PromoService
-from services.referral_service import ReferralService
 from database.models import DeliveryType, PaymentMethod, OrderStatus
 from database.database import async_session_maker
 from config import settings
@@ -218,9 +217,6 @@ async def choose_payment_method(callback: CallbackQuery, state: FSMContext):
                 return
             
             await OrderService.update_payment_status(session, order.id, "paid")
-            
-            # Обрабатываем реферальный бонус
-            await ReferralService.process_referral_bonus(session, order)
         
         # Формируем информацию о заказе
         order_info = await OrderService.format_order_info(session, order)

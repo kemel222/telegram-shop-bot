@@ -4,76 +4,114 @@ from api.dependencies import get_db, get_current_user
 from services.promo_service import PromoService
 from database.models import User
 from pydantic import BaseModel
+from typing import List, Optional
+from datetime import datetime
 
 router = APIRouter()
 
 
-class ValidatePromoRequest(BaseModel):
+class PromoCodeResponse(BaseModel):
+    id: int
     code: str
-    order_total: float
+    type: str
+    value: float
+    is_active: bool
+    usage_limit: Optional[int]
+    usage_count: int
+    expires_at: Optional[datetime]
+    
+    class Config:
+        from_attributes = True
 
 
-class ApplyPromoRequest(BaseModel):
+class PromoCodeValidationRequest(BaseModel):
     code: str
 
 
-@router.post("/validate")
+class PromoCodeValidationResponse(BaseModel):
+    is_valid: bool
+    type: Optional[str] = None
+    value: Optional[float] = None
+    discount_amount: Optional[float] = None
+    message: str
+
+
+@router.get("/promo-codes", response_model=List[PromoCodeResponse])
+async def get_promo_codes(session: AsyncSession = Depends(get_db)):
+    """Получить все активные промокоды"""
+    promo_codes = await PromoService.get_active_promo_codes(session)
+    return promo_codes
+
+
+@router.post("/validate", response_model=PromoCodeValidationResponse)
 async def validate_promo_code(
-    request: ValidatePromoRequest,
+    request: PromoCodeValidationRequest,
     session: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
     """Проверить валидность промокода"""
-    is_valid, message, promo = await PromoService.validate_promo_code(session, request.code)
+    promo_code = await PromoService.get_promo_code_by_code(session, request.code)
     
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=message)
+    if not promo_code:
+        return PromoCodeValidationResponse(
+            is_valid=False,
+            message="Промокод не найден"
+        )
     
-    # Рассчитываем скидку
-    from database.models import PromoCodeType
-    discount = 0.0
+    if not promo_code.is_active:
+        return PromoCodeValidationResponse(
+            is_valid=False,
+            message="Промокод неактивен"
+        )
     
-    if promo.type == PromoCodeType.PERCENT:
-        discount = request.order_total * (promo.value / 100)
-    elif promo.type == PromoCodeType.FIXED:
-        discount = min(promo.value, request.order_total)
-    elif promo.type == PromoCodeType.BALANCE:
-        return {
-            "valid": True,
-            "type": "balance",
-            "value": promo.value,
-            "message": f"Промокод пополнит баланс на {promo.value}₽"
-        }
+    if promo_code.expires_at and promo_code.expires_at < datetime.utcnow():
+        return PromoCodeValidationResponse(
+            is_valid=False,
+            message="Промокод истек"
+        )
     
-    return {
-        "valid": True,
-        "type": promo.type.value,
-        "discount": discount,
-        "message": f"Скидка составит {discount}₽"
-    }
+    if promo_code.usage_limit and promo_code.usage_count >= promo_code.usage_limit:
+        return PromoCodeValidationResponse(
+            is_valid=False,
+            message="Промокод исчерпан"
+        )
+    
+    return PromoCodeValidationResponse(
+        is_valid=True,
+        type=promo_code.type.value,
+        value=promo_code.value,
+        message="Промокод действителен"
+    )
 
 
-@router.post("/apply-balance-promo")
-async def apply_balance_promo(
-    request: ApplyPromoRequest,
+@router.post("/apply")
+async def apply_promo_code(
+    request: PromoCodeValidationRequest,
     session: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Применить промокод на пополнение баланса"""
-    is_valid, message, promo = await PromoService.validate_promo_code(session, request.code)
+    """Применить промокод к заказу"""
+    promo_code = await PromoService.get_promo_code_by_code(session, request.code)
     
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=message)
+    if not promo_code:
+        raise HTTPException(status_code=404, detail="Промокод не найден")
     
-    from database.models import PromoCodeType
-    if promo.type != PromoCodeType.BALANCE:
-        raise HTTPException(status_code=400, detail="Этот промокод не для пополнения баланса")
+    if not promo_code.is_active:
+        raise HTTPException(status_code=400, detail="Промокод неактивен")
     
-    # Применяем промокод
-    success, msg, _ = await PromoService.apply_promo_code(session, user.id, request.code, 0)
+    if promo_code.expires_at and promo_code.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Промокод истек")
     
-    if not success:
-        raise HTTPException(status_code=400, detail=msg)
+    if promo_code.usage_limit and promo_code.usage_count >= promo_code.usage_limit:
+        raise HTTPException(status_code=400, detail="Промокод исчерпан")
     
-    return {"message": msg, "new_balance": user.balance + promo.value}
-
+    # Увеличиваем счетчик использований
+    promo_code.usage_count += 1
+    await session.commit()
+    
+    return {
+        "message": "Промокод применен",
+        "promo_code": promo_code.code,
+        "type": promo_code.type.value,
+        "value": promo_code.value
+    }

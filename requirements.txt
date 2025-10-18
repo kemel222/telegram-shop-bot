@@ -7,7 +7,7 @@ alembic==1.13.1
 aiomysql==0.2.0
 pymysql==1.1.0
 cryptography==42.0.2
-pydantic==2.6.1
+pydantic==2.5.3
 pydantic-settings==2.1.0
 python-dotenv==1.0.1
 python-multipart==0.0.9

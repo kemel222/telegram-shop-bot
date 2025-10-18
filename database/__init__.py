@@ -1,7 +1,7 @@
 from database.database import get_session, init_db
 from database.models import (
     User, Category, Product, Cart, CartItem, Order, OrderItem,
-    PromoCode, Referral, Favorite, PaymentScreenshot
+    PromoCode, CashbackTransaction, Favorite, PaymentScreenshot
 )
 
 __all__ = [
@@ -15,7 +15,7 @@ __all__ = [
     'Order',
     'OrderItem',
     'PromoCode',
-    'Referral',
+    'CashbackTransaction',
     'Favorite',
     'PaymentScreenshot',
 ]

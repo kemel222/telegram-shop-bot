@@ -5,13 +5,14 @@ from services.cart_service import CartService
 from services.product_service import ProductService
 from database.models import User
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
 router = APIRouter()
 
 
 class AddToCartRequest(BaseModel):
     product_id: int
+    variant_id: Optional[int] = None
     quantity: int = 1
 
 
@@ -25,6 +26,8 @@ class CartItemResponse(BaseModel):
     product_name: str
     product_price: float
     product_image: str | None
+    variant_id: Optional[int] = None
+    variant_name: Optional[str] = None
     quantity: int
     subtotal: float
 
@@ -45,6 +48,7 @@ async def add_to_cart(
         session,
         user.id,
         request.product_id,
+        request.variant_id,
         request.quantity
     )
     
@@ -110,15 +114,27 @@ async def get_cart(
     for cart_item in cart_items:
         product = await ProductService.get_product_by_id(session, cart_item.product_id)
         if product:
-            subtotal = product.price * cart_item.quantity
+            # Определяем цену (вариант или основной товар)
+            price = product.price
+            variant_name = None
+            
+            if cart_item.variant_id:
+                variant = await ProductService.get_variant_by_id(session, cart_item.variant_id)
+                if variant:
+                    price = variant.price or product.price
+                    variant_name = variant.name
+            
+            subtotal = price * cart_item.quantity
             total += subtotal
             
             items_response.append({
                 "id": cart_item.id,
                 "product_id": product.id,
                 "product_name": product.name,
-                "product_price": product.price,
+                "product_price": price,
                 "product_image": product.image_url,
+                "variant_id": cart_item.variant_id,
+                "variant_name": variant_name,
                 "quantity": cart_item.quantity,
                 "subtotal": subtotal
             })

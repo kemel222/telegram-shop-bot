@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
-from database.models import Product, Category, Favorite
+from database.models import Product, Category, Favorite, ProductVariant
 from typing import List, Optional
 
 
@@ -9,6 +9,17 @@ class ProductService:
     async def get_all_categories(session: AsyncSession) -> List[Category]:
         """Получить все категории"""
         result = await session.execute(select(Category))
+        return result.scalars().all()
+    
+    @staticmethod
+    async def get_all_products(session: AsyncSession) -> List[Product]:
+        """Получить все товары"""
+        result = await session.execute(
+            select(Product).where(
+                Product.is_available == True,
+                Product.quantity > 0
+            )
+        )
         return result.scalars().all()
     
     @staticmethod
@@ -129,6 +140,53 @@ class ProductService:
             )
         )
         return result.scalars().all()
+    
+    @staticmethod
+    async def get_product_variants(session: AsyncSession, product_id: int) -> List[ProductVariant]:
+        """Получить варианты товара"""
+        result = await session.execute(
+            select(ProductVariant).where(
+                ProductVariant.product_id == product_id,
+                ProductVariant.is_available == True
+            )
+        )
+        return result.scalars().all()
+    
+    @staticmethod
+    async def get_variant_by_id(session: AsyncSession, variant_id: int) -> Optional[ProductVariant]:
+        """Получить вариант товара по ID"""
+        result = await session.execute(
+            select(ProductVariant).where(ProductVariant.id == variant_id)
+        )
+        return result.scalar_one_or_none()
+    
+    @staticmethod
+    async def decrease_variant_quantity(session: AsyncSession, variant_id: int, quantity: int) -> bool:
+        """Уменьшить количество варианта товара на складе"""
+        variant = await ProductService.get_variant_by_id(session, variant_id)
+        
+        if not variant or variant.quantity < quantity:
+            return False
+        
+        variant.quantity -= quantity
+        
+        # Если вариант закончился, делаем его недоступным
+        if variant.quantity == 0:
+            variant.is_available = False
+        
+        await session.commit()
+        return True
+    
+    @staticmethod
+    async def increase_variant_quantity(session: AsyncSession, variant_id: int, quantity: int):
+        """Увеличить количество варианта товара на складе (возврат)"""
+        variant = await ProductService.get_variant_by_id(session, variant_id)
+        
+        if variant:
+            variant.quantity += quantity
+            if variant.quantity > 0:
+                variant.is_available = True
+            await session.commit()
     
     @staticmethod
     async def is_in_favorites(session: AsyncSession, user_id: int, product_id: int) -> bool:

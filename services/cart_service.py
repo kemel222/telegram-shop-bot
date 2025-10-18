@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from database.models import Cart, CartItem, Product
+from database.models import Cart, CartItem, Product, ProductVariant
 from typing import List, Optional
 
 
@@ -26,6 +26,7 @@ class CartService:
         session: AsyncSession,
         user_id: int,
         product_id: int,
+        variant_id: Optional[int] = None,
         quantity: int = 1
     ) -> Optional[CartItem]:
         """Добавить товар в корзину"""
@@ -35,32 +36,56 @@ class CartService:
         )
         product = product.scalar_one_or_none()
         
-        if not product or not product.is_available or product.quantity < quantity:
+        if not product or not product.is_available:
             return None
+        
+        # Если есть вариант, проверяем его
+        if variant_id:
+            variant = await session.execute(
+                select(ProductVariant).where(ProductVariant.id == variant_id)
+            )
+            variant = variant.scalar_one_or_none()
+            
+            if not variant or not variant.is_available or variant.quantity < quantity:
+                return None
+        else:
+            # Проверяем количество основного товара
+            if product.quantity < quantity:
+                return None
         
         # Получаем или создаем корзину
         cart = await CartService.get_or_create_cart(session, user_id)
         
         # Проверяем, есть ли уже этот товар в корзине
-        result = await session.execute(
-            select(CartItem).where(
-                CartItem.cart_id == cart.id,
-                CartItem.product_id == product_id
-            )
+        query = select(CartItem).where(
+            CartItem.cart_id == cart.id,
+            CartItem.product_id == product_id
         )
+        
+        if variant_id:
+            query = query.where(CartItem.variant_id == variant_id)
+        else:
+            query = query.where(CartItem.variant_id.is_(None))
+        
+        result = await session.execute(query)
         cart_item = result.scalar_one_or_none()
         
         if cart_item:
             # Обновляем количество
             new_quantity = cart_item.quantity + quantity
-            if new_quantity > product.quantity:
-                return None  # Недостаточно товара
+            
+            # Проверяем доступность
+            available_quantity = variant.quantity if variant_id else product.quantity
+            if new_quantity > available_quantity:
+                return None
+            
             cart_item.quantity = new_quantity
         else:
             # Создаем новый элемент корзины
             cart_item = CartItem(
                 cart_id=cart.id,
                 product_id=product_id,
+                variant_id=variant_id,
                 quantity=quantity
             )
             session.add(cart_item)
@@ -147,8 +172,20 @@ class CartService:
                 select(Product).where(Product.id == item.product_id)
             )
             product = result.scalar_one_or_none()
+            
             if product:
-                total += product.price * item.quantity
+                price = product.price
+                
+                # Если есть вариант, используем его цену
+                if item.variant_id:
+                    variant_result = await session.execute(
+                        select(ProductVariant).where(ProductVariant.id == item.variant_id)
+                    )
+                    variant = variant_result.scalar_one_or_none()
+                    if variant and variant.price:
+                        price = variant.price
+                
+                total += price * item.quantity
         
         return total
     

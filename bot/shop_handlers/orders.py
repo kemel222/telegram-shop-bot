@@ -10,7 +10,6 @@ from services.cart_service import CartService
 from services.order_service import OrderService
 from services.user_service import UserService
 from services.promo_service import PromoService
-from services.referral_service import ReferralService
 from database.models import DeliveryType, PaymentMethod
 from database.database import async_session_maker
 from config import settings
@@ -76,6 +75,12 @@ async def process_name(message: Message, state: FSMContext):
 async def process_phone(message: Message, state: FSMContext):
     """Обработать введённый телефон"""
     await state.update_data(customer_phone=message.text)
+    
+    # Привязываем телефон к аккаунту пользователя
+    async with async_session_maker() as session:
+        user = await UserService.get_user_by_telegram_id(session, message.from_user.id)
+        if user and not user.phone:
+            await UserService.update_phone(session, user.id, message.text)
     
     data = await state.get_data()
     delivery_type = data['delivery_type']
@@ -202,7 +207,6 @@ async def choose_payment_method(callback: CallbackQuery, state: FSMContext):
                 return
             
             await OrderService.update_payment_status(session, order.id, "paid")
-            await ReferralService.process_referral_bonus(session, order)
         
         order_info = await OrderService.format_order_info(session, order)
         

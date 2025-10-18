@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .info {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #ff9800; }
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Тест Mini App - Hotspot Shop</h1>
+    
+    <div id="results"></div>
+    
+    <div class="info">
+        <h3>Действия:</h3>
+        <button class="button" onclick="testTelegram()">Тест Telegram API</button>
+        <button class="button" onclick="testAuth()">Тест авторизации</button>
+        <button class="button" onclick="testAPI()">Тест API</button>
+        <button class="button" onclick="clearResults()">Очистить</button>
+    </div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+        
+        function addResult(title, content, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `info ${type}`;
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${typeof content === 'object' ? JSON.stringify(content, null, 2) : content}</pre>
+            `;
+            resultsDiv.appendChild(div);
+        }
+        
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+        
+        function testTelegram() {
+            clearResults();
+            
+            if (window.Telegram && window.Telegram.WebApp) {
+                addResult('✅ Telegram API найден', 'OK', 'success');
+                
+                const tg = window.Telegram.WebApp;
+                tg.ready();
+                tg.expand();
+                
+                addResult('📱 Платформа', {
+                    platform: tg.platform,
+                    version: tg.version,
+                    isExpanded: tg.isExpanded,
+                    viewportHeight: tg.viewportHeight,
+                    viewportStableHeight: tg.viewportStableHeight
+                });
+                
+                if (tg.initData) {
+                    addResult('✅ initData есть', tg.initData.substring(0, 100) + '...', 'success');
+                } else {
+                    addResult('❌ initData нет', 'Не передано!', 'error');
+                }
+                
+                const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
+                if (user) {
+                    addResult('✅ Пользователь найден!', {
+                        id: user.id,
+                        username: user.username,
+                        first_name: user.first_name,
+                        last_name: user.last_name,
+                        language_code: user.language_code
+                    }, 'success');
+                    
+                    addResult('🎉 ВСЁ РАБОТАЕТ!', 'Mini App настроен правильно!', 'success');
+                } else {
+                    addResult('❌ Пользователь НЕ найден', 'Откройте через кнопку в боте!', 'error');
+                }
+                
+                addResult('🔍 Все данные initDataUnsafe', tg.initDataUnsafe);
+                
+            } else {
+                addResult('❌ Telegram API НЕ найден', 'Откройте в Telegram!', 'error');
+            }
+        }
+        
+        async function testAuth() {
+            try {
+                const response = await fetch('/api/users/auth', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        telegram_id: 123456,
+                        username: 'test_user',
+                        first_name: 'Test User'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('✅ Авторизация работает', data, 'success');
+                } else {
+                    const error = await response.json();
+                    addResult('❌ Ошибка авторизации', error, 'error');
+                }
+            } catch (error) {
+                addResult('❌ Ошибка запроса', error.message, 'error');
+            }
+        }
+        
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('✅ API работает', data, 'success');
+                } else {
+                    addResult('❌ API не работает', `Status: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                addResult('❌ Ошибка API', error.message, 'error');
+            }
+        }
+        
+        // Автоматический тест при загрузке
+        window.addEventListener('load', () => {
+            setTimeout(testTelegram, 1000);
+        });
+    </script>
+</body>
+</html>

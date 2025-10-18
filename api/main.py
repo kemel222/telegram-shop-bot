@@ -18,13 +18,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Подключение роутеров
-app.include_router(products.router, prefix="/api/products", tags=["Products"])
-app.include_router(cart.router, prefix="/api/cart", tags=["Cart"])
-app.include_router(orders.router, prefix="/api/orders", tags=["Orders"])
-app.include_router(promo.router, prefix="/api/promo", tags=["Promo Codes"])
-app.include_router(users.router, prefix="/api/users", tags=["Users"])
-app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+# Подключение роутеров (без /api префикса, т.к. Nginx уже проксирует /api)
+app.include_router(products.router, prefix="/products", tags=["Products"])
+app.include_router(cart.router, prefix="/cart", tags=["Cart"])
+app.include_router(orders.router, prefix="/orders", tags=["Orders"])
+app.include_router(promo.router, prefix="/promo", tags=["Promo Codes"])
+app.include_router(users.router, prefix="/users", tags=["Users"])
+app.include_router(admin.router, prefix="/admin", tags=["Admin"])
 
 
 @app.on_event("startup")
@@ -45,5 +45,5 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    return {"status": "ok"}
 

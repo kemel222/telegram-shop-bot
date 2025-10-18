@@ -1,16 +1,1651 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
+<head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <meta name="theme-color" content="#000000" />
-    <meta name="description" content="Telegram Shop Mini App" />
-    <title>Магазин</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-  </body>
-</html>
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="description" content="Hotspot - Магазин электронных сигарет" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <title>Hotspot - Магазин электронных сигарет</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --white: #ffffff;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            
+            --radius: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        /* Top Panel */
+        .top-panel {
+            background: var(--white);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+            padding: 12px 0;
+        }
+
+        .top-panel-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--white);
+            font-weight: 600;
+            font-size: 16px;
+            overflow: hidden;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--gray-800);
+            font-size: 14px;
+        }
+
+        .user-meta {
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+
+        .balance-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .balance {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--gray-50);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-weight: 600;
+            color: var(--gray-700);
+            font-size: 14px;
+        }
+
+        .balance-icon {
+            color: var(--primary);
+            font-size: 12px;
+        }
+
+        /* Search Bar */
+        .search-container {
+            background: var(--white);
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius-lg);
+            padding: 12px 16px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            color: var(--gray-800);
+        }
+
+        .search-input::placeholder {
+            color: var(--gray-500);
+        }
+
+        .search-icon {
+            color: var(--gray-500);
+        }
+
+        /* Main Content */
+        .main {
+            padding: 20px 0 100px 0;
+            min-height: calc(100vh - 200px);
+        }
+
+        /* Categories */
+        .categories-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-bottom: 16px;
+        }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .category-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .category-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary);
+        }
+
+        .category-card.active {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .category-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+            color: var(--primary);
+        }
+
+        .category-card.active .category-icon {
+            color: var(--white);
+        }
+
+        .category-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Products */
+        .products-section {
+            margin-bottom: 30px;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .product-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            background: var(--gray-100);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-400);
+            font-size: 48px;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 16px;
+        }
+
+        .product-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--gray-800);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .product-description {
+            font-size: 14px;
+            color: var(--gray-600);
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .product-variants {
+            margin-bottom: 12px;
+        }
+
+        .product-variants select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            background: var(--white);
+            font-size: 14px;
+            color: var(--gray-800);
+        }
+
+        .product-variants select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .product-variants select option:disabled {
+            color: var(--gray-400);
+        }
+
+        .product-price {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+
+        .product-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .product-quantity {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: 4px 8px;
+        }
+
+        .quantity-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: var(--primary);
+            color: var(--white);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .quantity-btn:disabled {
+            background: var(--gray-300);
+            cursor: not-allowed;
+        }
+
+        .quantity-value {
+            font-weight: 600;
+            font-size: 14px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .favorite-btn {
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        .favorite-btn.active {
+            background: var(--error);
+            color: var(--white);
+        }
+
+        .cart-btn {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .cart-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--white);
+            border-top: 1px solid var(--gray-200);
+            padding: 12px 0;
+            z-index: 100;
+        }
+
+        .bottom-nav-content {
+            display: flex;
+            justify-content: space-around;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: var(--radius);
+            transition: all 0.2s ease;
+            color: var(--gray-600);
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+            background: var(--gray-50);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        .nav-label {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .nav-badge {
+            position: absolute;
+            top: 4px;
+            right: 8px;
+            background: var(--error);
+            color: var(--white);
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--gray-500);
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--gray-500);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--gray-700);
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Cart Styles */
+        .cart-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+        }
+
+        .cart-item-image {
+            width: 60px;
+            height: 60px;
+            background: var(--gray-100);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-400);
+            font-size: 24px;
+            overflow: hidden;
+        }
+
+        .cart-item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .cart-item-info {
+            flex: 1;
+        }
+
+        .cart-item-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--gray-800);
+            margin-bottom: 4px;
+        }
+
+        .cart-item-variant {
+            font-size: 14px;
+            color: var(--gray-600);
+            margin-bottom: 4px;
+        }
+
+        .cart-item-price {
+            font-size: 14px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .cart-item-quantity {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--gray-50);
+            border-radius: var(--radius);
+            padding: 4px 8px;
+        }
+
+        .cart-item-subtotal {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--gray-800);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .remove-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: var(--error);
+            color: var(--white);
+            border-radius: var(--radius);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .cart-summary {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--gray-200);
+        }
+
+        .promo-section {
+            margin-bottom: 20px;
+        }
+
+        .promo-input {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .promo-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 16px;
+        }
+
+        .promo-input button {
+            padding: 12px 20px;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .promo-message {
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: var(--radius);
+        }
+
+        .promo-message.success {
+            background: var(--success);
+            color: var(--white);
+        }
+
+        .promo-message.error {
+            background: var(--error);
+            color: var(--white);
+        }
+
+        .summary-totals {
+            margin-bottom: 20px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 16px;
+        }
+
+        .summary-row.total-row {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--primary);
+            border-top: 1px solid var(--gray-200);
+            padding-top: 12px;
+            margin-top: 8px;
+        }
+
+        .checkout-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius-lg);
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .checkout-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 12px;
+            }
+            
+            .categories-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 12px;
+            }
+            
+            .products-grid {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 16px;
+            }
+            
+            .product-card {
+                border-radius: var(--radius-md);
+            }
+            
+            .product-info {
+                padding: 12px;
+            }
+            
+            .cart-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            
+            .cart-item-image {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .promo-input {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Panel -->
+    <div class="top-panel">
+        <div class="top-panel-content">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="user-details">
+                    <div class="user-name" id="userName">Загрузка...</div>
+                    <div class="user-meta" id="userMeta">ID: <span id="userId">-</span></div>
+                </div>
+            </div>
+            <div class="balance-section">
+                <div class="balance">
+                    <i class="fas fa-wallet balance-icon"></i>
+                    <span id="userBalance">0 ₽</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+        <div class="container">
+            <!-- Search Bar -->
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="searchInput" placeholder="Поиск товаров...">
+            </div>
+
+            <!-- Home Page -->
+            <div id="homePage">
+                <!-- Categories Section -->
+                <div class="categories-section">
+                    <h2 class="section-title">Категории</h2>
+                    <div class="categories-grid" id="categoriesGrid">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <span>Загрузка категорий...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products Section -->
+                <div class="products-section">
+                    <h2 class="section-title">Популярные товары</h2>
+                    <div class="products-grid" id="productsGrid">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <span>Загрузка товаров...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Results Page -->
+            <div id="searchPage" class="hidden">
+                <div class="products-section">
+                    <h2 class="section-title">Результаты поиска</h2>
+                    <div class="products-grid" id="searchResultsGrid">
+                        <div class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>Начните поиск</h3>
+                            <p>Введите название товара в поле поиска</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Favorites Page -->
+            <div id="favoritesPage" class="hidden">
+                <div class="products-section">
+                    <h2 class="section-title">Избранное</h2>
+                    <div class="products-grid" id="favoritesGrid">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <span>Загрузка избранного...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart Page -->
+            <div id="cartPage" class="hidden">
+                <div class="products-section">
+                    <h2 class="section-title">Корзина</h2>
+                    <div id="cartContent">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <span>Загрузка корзины...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Page -->
+            <div id="profilePage" class="hidden">
+                <div class="products-section">
+                    <h2 class="section-title">Профиль</h2>
+                    <div id="profileContent">
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <span>Загрузка профиля...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="bottom-nav-content">
+            <div class="nav-item active" data-page="home">
+                <i class="fas fa-home nav-icon"></i>
+                <span class="nav-label">Главная</span>
+            </div>
+            <div class="nav-item" data-page="search">
+                <i class="fas fa-search nav-icon"></i>
+                <span class="nav-label">Поиск</span>
+            </div>
+            <div class="nav-item" data-page="favorites">
+                <i class="fas fa-heart nav-icon"></i>
+                <span class="nav-label">Избранное</span>
+            </div>
+            <div class="nav-item" data-page="cart">
+                <i class="fas fa-shopping-cart nav-icon"></i>
+                <span class="nav-label">Корзина</span>
+                <span class="nav-badge hidden" id="cartBadge">0</span>
+            </div>
+            <div class="nav-item" data-page="profile">
+                <i class="fas fa-user nav-icon"></i>
+                <span class="nav-label">Профиль</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentUser = null;
+        let categories = [];
+        let products = [];
+        let cartItems = [];
+        let favorites = [];
+        let currentPage = 'home';
+
+        // API Base URL - настройка
+        function getApiBaseUrl() {
+            // ВАЖНО: Замените на адрес вашего сервера!
+            // Примеры:
+            // return 'https://your-domain.com/api';
+            // return 'https://api.your-domain.com/api';
+            // return 'http://192.168.1.100:8000/api';
+            
+            // Автоматическое определение
+            const currentDomain = window.location.hostname;
+            
+            // Если это localhost, используем localhost
+            if (currentDomain === 'localhost' || currentDomain === '127.0.0.1') {
+                return 'http://localhost:8000/api';
+            }
+            
+            // Иначе используем тот же домен (для продакшена)
+            return `https://${currentDomain}/api`;
+        }
+        
+        // Fallback URL - если автоматическое определение не работает
+        const FALLBACK_API_URL = 'https://hotspotovich.shop/api';  // ← ЗАМЕНИТЕ НА ВАШ ДОМЕН
+        
+        let API_BASE = getApiBaseUrl();
+        
+        // Отладочная информация
+        console.log('🔗 API Base URL:', API_BASE);
+        console.log('🌐 Current domain:', window.location.hostname);
+        console.log('🔗 Full URL:', window.location.href);
+        console.log('🔄 Fallback URL:', FALLBACK_API_URL);
+
+        // Utility functions
+        function showSuccess(message) {
+            // Простое уведомление об успехе
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert(message);
+            } else {
+                alert(message);
+            }
+            console.log('Success:', message);
+        }
+
+        function showError(message) {
+            // Простое уведомление об ошибке
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert(message);
+            } else {
+                alert('Ошибка: ' + message);
+            }
+            console.error('Error:', message);
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            try {
+                // Тест подключения к API
+                console.log('🔍 Тестирование подключения к API...');
+                let apiWorking = false;
+                
+                try {
+                    const healthResponse = await fetch(`${API_BASE.replace('/api', '')}/health`);
+                    if (healthResponse.ok) {
+                        console.log('✅ API сервер доступен');
+                        apiWorking = true;
+                    } else {
+                        console.log('⚠️ API сервер недоступен');
+                    }
+                } catch (error) {
+                    console.log('❌ Ошибка подключения к API:', error.message);
+                    
+                    // Пробуем fallback URL
+                    if (API_BASE !== FALLBACK_API_URL) {
+                        console.log('🔄 Пробуем fallback URL...');
+                        API_BASE = FALLBACK_API_URL;
+                        
+                        try {
+                            const fallbackResponse = await fetch(`${API_BASE.replace('/api', '')}/health`);
+                            if (fallbackResponse.ok) {
+                                console.log('✅ Fallback API сервер доступен');
+                                apiWorking = true;
+                            }
+                        } catch (fallbackError) {
+                            console.log('❌ Fallback API тоже недоступен:', fallbackError.message);
+                        }
+                    }
+                }
+                
+                if (!apiWorking) {
+                    showError('API сервер недоступен. Проверьте настройки сервера.');
+                    return;
+                }
+                
+                // Get user info from Telegram
+                const user = await getTelegramUser();
+                currentUser = user;
+                updateUserInfo(user);
+                
+                // Load initial data
+                await loadCategories();
+                await loadProducts();
+                await loadCart();
+                await loadFavorites();
+                
+                // Setup event listeners
+                setupEventListeners();
+                
+            } catch (error) {
+                console.error('Error initializing app:', error);
+                showError('Ошибка инициализации приложения');
+            }
+        }
+
+        function getTelegramUser() {
+            return new Promise((resolve, reject) => {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const user = window.Telegram.WebApp.initDataUnsafe?.user;
+                    if (user) {
+                        resolve(user);
+                    } else {
+                        reject(new Error('User not found'));
+                    }
+                } else {
+                    // Fallback for testing
+                    resolve({
+                        id: 123456789,
+                        first_name: 'Test',
+                        last_name: 'User',
+                        username: 'testuser'
+                    });
+                }
+            });
+        }
+
+        function updateUserInfo(user) {
+            document.getElementById('userName').textContent = 
+                `${user.first_name} ${user.last_name || ''}`.trim();
+            document.getElementById('userId').textContent = user.id;
+            
+            // Update avatar
+            const avatar = document.getElementById('userAvatar');
+            if (user.photo_url) {
+                avatar.innerHTML = `<img src="${user.photo_url}" alt="Avatar">`;
+            } else {
+                avatar.innerHTML = `<i class="fas fa-user"></i>`;
+            }
+        }
+
+        async function loadCategories() {
+            try {
+                const response = await fetch(`${API_BASE}/products/categories`);
+                categories = await response.json();
+                renderCategories();
+            } catch (error) {
+                console.error('Error loading categories:', error);
+                showError('Ошибка загрузки категорий');
+            }
+        }
+
+        async function loadProducts(categoryId = null) {
+            try {
+                let url;
+                if (categoryId) {
+                    url = `${API_BASE}/products/categories/${categoryId}/products`;
+                } else {
+                    // Загружаем все товары через публичный роут
+                    url = `${API_BASE}/products/public`;
+                }
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'X-Telegram-User-ID': currentUser.id.toString()
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                products = await response.json();
+                renderProducts(products);
+            } catch (error) {
+                console.error('Error loading products:', error);
+                showError('Ошибка загрузки товаров');
+            }
+        }
+
+        async function loadCart() {
+            try {
+                const response = await fetch(`${API_BASE}/cart`, {
+                    headers: {
+                        'X-Telegram-User-ID': currentUser.id.toString()
+                    }
+                });
+                const cartData = await response.json();
+                cartItems = cartData.items || [];
+                updateCartBadge();
+            } catch (error) {
+                console.error('Error loading cart:', error);
+            }
+        }
+
+        async function loadFavorites() {
+            try {
+                const response = await fetch(`${API_BASE}/products/favorites/list`, {
+                    headers: {
+                        'X-Telegram-User-ID': currentUser.id.toString()
+                    }
+                });
+                favorites = await response.json();
+            } catch (error) {
+                console.error('Error loading favorites:', error);
+            }
+        }
+
+        function renderCategories() {
+            const grid = document.getElementById('categoriesGrid');
+            grid.innerHTML = '';
+            
+            categories.forEach(category => {
+                const categoryCard = document.createElement('div');
+                categoryCard.className = 'category-card';
+                categoryCard.innerHTML = `
+                    <div class="category-icon">
+                        <i class="fas fa-${getCategoryIcon(category.name)}"></i>
+                    </div>
+                    <div class="category-name">${category.name}</div>
+                `;
+                
+                categoryCard.addEventListener('click', () => {
+                    loadProducts(category.id);
+                });
+                
+                grid.appendChild(categoryCard);
+            });
+        }
+
+        function renderProducts(productsToRender) {
+            const grid = document.getElementById('productsGrid');
+            grid.innerHTML = '';
+            
+            // Проверяем, что productsToRender является массивом
+            if (!Array.isArray(productsToRender)) {
+                console.error('productsToRender is not an array:', productsToRender);
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Ошибка загрузки</h3>
+                        <p>Не удалось загрузить товары</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (productsToRender.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-box-open"></i>
+                        <h3>Товары не найдены</h3>
+                        <p>В данной категории пока нет товаров</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            productsToRender.forEach(product => {
+                const productCard = document.createElement('div');
+                productCard.className = 'product-card';
+                
+                // Если есть варианты, показываем их
+                let variantsHtml = '';
+                if (product.has_variants && product.variants && product.variants.length > 0) {
+                    variantsHtml = `
+                        <div class="product-variants">
+                            <select id="variant-${product.id}" onchange="selectVariant(${product.id})">
+                                <option value="">Выберите вкус</option>
+                                ${product.variants.map(variant => 
+                                    `<option value="${variant.id}" ${variant.quantity === 0 ? 'disabled' : ''}>
+                                        ${variant.name} ${variant.quantity === 0 ? '(закончился)' : ''}
+                                    </option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                    `;
+                }
+                
+                productCard.innerHTML = `
+                    <div class="product-image">
+                        ${product.image_url ? 
+                            `<img src="${product.image_url}" alt="${product.name}">` : 
+                            '<i class="fas fa-box"></i>'
+                        }
+                    </div>
+                    <div class="product-info">
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-description">${product.description || ''}</div>
+                        <div class="product-price">${product.price} ₽</div>
+                        ${variantsHtml}
+                        <div class="product-actions">
+                            <div class="product-quantity">
+                                <button class="quantity-btn" onclick="changeQuantity(${product.id}, -1)">-</button>
+                                <span class="quantity-value" id="quantity-${product.id}">1</span>
+                                <button class="quantity-btn" onclick="changeQuantity(${product.id}, 1)">+</button>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="action-btn favorite-btn ${product.is_favorite ? 'active' : ''}" 
+                                        onclick="toggleFavorite(${product.id})">
+                                    <i class="fas fa-heart"></i>
+                                </button>
+                                <button class="action-btn cart-btn" onclick="addToCart(${product.id})">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                grid.appendChild(productCard);
+            });
+        }
+
+        function getCategoryIcon(categoryName) {
+            const icons = {
+                'Электронные сигареты': 'smoking',
+                'Поды': 'battery-half',
+                'Жидкости': 'tint',
+                'Аксессуары': 'cog'
+            };
+            return icons[categoryName] || 'box';
+        }
+
+        function setupEventListeners() {
+            // Search input
+            const searchInput = document.getElementById('searchInput');
+            let searchTimeout;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    searchProducts(e.target.value);
+                }, 300);
+            });
+
+            // Bottom navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const page = item.dataset.page;
+                    navigateToPage(page);
+                });
+            });
+        }
+
+        async function searchProducts(query) {
+            if (!query.trim()) {
+                document.getElementById('searchResultsGrid').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <h3>Начните поиск</h3>
+                        <p>Введите название товара в поле поиска</p>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/products/search/${encodeURIComponent(query)}`, {
+                    headers: {
+                        'X-Telegram-User-ID': currentUser.id.toString()
+                    }
+                });
+                const searchResults = await response.json();
+                
+                const grid = document.getElementById('searchResultsGrid');
+                grid.innerHTML = '';
+                
+                if (searchResults.length === 0) {
+                    grid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-search"></i>
+                            <h3>Ничего не найдено</h3>
+                            <p>Попробуйте изменить поисковый запрос</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                renderProducts(searchResults);
+            } catch (error) {
+                console.error('Error searching products:', error);
+                showError('Ошибка поиска');
+            }
+        }
+
+        function navigateToPage(page) {
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-page="${page}"]`).classList.add('active');
+
+            // Show/hide pages
+            document.querySelectorAll('[id$="Page"]').forEach(pageEl => {
+                pageEl.classList.add('hidden');
+            });
+            document.getElementById(`${page}Page`).classList.remove('hidden');
+
+            currentPage = page;
+
+            // Load page-specific content
+            switch (page) {
+                case 'search':
+                    document.getElementById('searchInput').focus();
+                    break;
+                case 'favorites':
+                    loadFavoritesPage();
+                    break;
+                case 'cart':
+                    loadCartPage();
+                    break;
+                case 'profile':
+                    loadProfilePage();
+                    break;
+            }
+        }
+
+        async function loadFavoritesPage() {
+            const grid = document.getElementById('favoritesGrid');
+            grid.innerHTML = '';
+            
+            if (favorites.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-heart"></i>
+                        <h3>Избранное пусто</h3>
+                        <p>Добавьте товары в избранное, нажав на сердечко</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            renderProducts(favorites);
+        }
+
+        async function loadCartPage() {
+            const content = document.getElementById('cartContent');
+            
+            if (cartItems.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-shopping-cart"></i>
+                        <h3>Корзина пуста</h3>
+                        <p>Добавьте товары в корзину</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Рассчитываем общую стоимость
+            const total = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
+            
+            content.innerHTML = `
+                <div class="cart-items">
+                    ${cartItems.map(item => `
+                        <div class="cart-item">
+                            <div class="cart-item-image">
+                                ${item.product_image ? 
+                                    `<img src="${item.product_image}" alt="${item.product_name}">` : 
+                                    '<i class="fas fa-box"></i>'
+                                }
+                            </div>
+                            <div class="cart-item-info">
+                                <div class="cart-item-name">${item.product_name}</div>
+                                ${item.variant_name ? `<div class="cart-item-variant">${item.variant_name}</div>` : ''}
+                                <div class="cart-item-price">${item.product_price} ₽</div>
+                            </div>
+                            <div class="cart-item-quantity">
+                                <button class="quantity-btn" onclick="updateCartQuantity(${item.product_id}, ${item.variant_id || 'null'}, ${item.quantity - 1})">-</button>
+                                <span class="quantity-value">${item.quantity}</span>
+                                <button class="quantity-btn" onclick="updateCartQuantity(${item.product_id}, ${item.variant_id || 'null'}, ${item.quantity + 1})">+</button>
+                            </div>
+                            <div class="cart-item-subtotal">${item.subtotal} ₽</div>
+                            <button class="remove-btn" onclick="removeFromCart(${item.product_id}, ${item.variant_id || 'null'})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="cart-summary">
+                    <div class="promo-section">
+                        <div class="promo-input">
+                            <input type="text" id="promoCodeInput" placeholder="Введите промокод">
+                            <button onclick="applyPromoCode()">Применить</button>
+                        </div>
+                        <div id="promoMessage" class="promo-message"></div>
+                    </div>
+                    
+                    <div class="summary-totals">
+                        <div class="summary-row">
+                            <span>Товары:</span>
+                            <span>${total} ₽</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Доставка:</span>
+                            <span id="deliveryCost">0 ₽</span>
+                        </div>
+                        <div class="summary-row" id="discountRow" style="display: none;">
+                            <span>Скидка:</span>
+                            <span id="discountAmount">0 ₽</span>
+                        </div>
+                        <div class="summary-row total-row">
+                            <span>Итого:</span>
+                            <span id="totalAmount">${total} ₽</span>
+                        </div>
+                    </div>
+                    
+                    <button class="checkout-btn" onclick="startCheckout()">
+                        Оформить заказ
+                    </button>
+                </div>
+            `;
+        }
+
+        async function loadProfilePage() {
+            const content = document.getElementById('profileContent');
+            
+            // TODO: Implement profile page content
+            content.innerHTML = '<p>Профиль в разработке...</p>';
+        }
+
+        async function toggleFavorite(productId) {
+            try {
+                const product = products.find(p => p.id === productId);
+                const isFavorite = product.is_favorite;
+                
+                const method = isFavorite ? 'DELETE' : 'POST';
+                const response = await fetch(`${API_BASE}/products/${productId}/favorite`, {
+                    method: method,
+                    headers: {
+                        'X-Telegram-User-ID': currentUser.id.toString()
+                    }
+                });
+                
+                if (response.ok) {
+                    product.is_favorite = !isFavorite;
+                    
+                    // Update button
+                    const button = document.querySelector(`[onclick="toggleFavorite(${productId})"]`);
+                    button.classList.toggle('active');
+                    
+                    // Update favorites list
+                    if (isFavorite) {
+                        favorites = favorites.filter(f => f.id !== productId);
+                    } else {
+                        favorites.push(product);
+                    }
+                }
+            } catch (error) {
+                console.error('Error toggling favorite:', error);
+                showError('Ошибка обновления избранного');
+            }
+        }
+
+        async function addToCart(productId, variantId = null) {
+            try {
+                const quantity = parseInt(document.getElementById(`quantity-${productId}`).textContent);
+                
+                const response = await fetch(`${API_BASE}/cart/add`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-User-ID': currentUser.id.toString()
+                    },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        variant_id: variantId,
+                        quantity: quantity
+                    })
+                });
+                
+                if (response.ok) {
+                    await loadCart();
+                    showSuccess('Товар добавлен в корзину');
+                } else {
+                    showError('Ошибка добавления в корзину');
+                }
+            } catch (error) {
+                console.error('Error adding to cart:', error);
+                showError('Ошибка добавления в корзину');
+            }
+        }
+
+        function selectVariant(productId) {
+            const select = document.getElementById(`variant-${productId}`);
+            const variantId = select.value;
+            
+            // Обновляем функцию добавления в корзину для этого товара
+            const cartBtn = select.closest('.product-card').querySelector('.cart-btn');
+            cartBtn.onclick = () => addToCart(productId, variantId || null);
+        }
+
+        function changeQuantity(productId, delta) {
+            const quantityEl = document.getElementById(`quantity-${productId}`);
+            const currentQuantity = parseInt(quantityEl.textContent);
+            const newQuantity = Math.max(1, currentQuantity + delta);
+            quantityEl.textContent = newQuantity;
+        }
+
+        function updateCartBadge() {
+            const badge = document.getElementById('cartBadge');
+            const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+            
+            if (totalItems > 0) {
+                badge.textContent = totalItems;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        async function updateCartQuantity(productId, variantId, quantity) {
+            try {
+                if (quantity <= 0) {
+                    await removeFromCart(productId, variantId);
+                    return;
+                }
+                
+                const response = await fetch(`${API_BASE}/cart/${productId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-User-ID': currentUser.id.toString()
+                    },
+                    body: JSON.stringify({
+                        quantity: quantity
+                    })
+                });
+                
+                if (response.ok) {
+                    await loadCart();
+                    if (currentPage === 'cart') {
+                        await loadCartPage();
+                    }
+                } else {
+                    showError('Ошибка обновления корзины');
+                }
+            } catch (error) {
+                console.error('Error updating cart:', error);
+                showError('Ошибка обновления корзины');
+            }
+        }
+
+        async function removeFromCart(productId, variantId) {
+            try {
+                const response = await fetch(`${API_BASE}/cart/${productId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Telegram-User-ID': currentUser.id.toString()
+                    }
+                });
+                
+                if (response.ok) {
+                    await loadCart();
+                    if (currentPage === 'cart') {
+                        await loadCartPage();
+                    }
+                    showSuccess('Товар удален из корзины');
+                } else {
+                    showError('Ошибка удаления из корзины');
+                }
+            } catch (error) {
+                console.error('Error removing from cart:', error);
+                showError('Ошибка удаления из корзины');
+            }
+        }
+
+        async function applyPromoCode() {
+            const promoCodeInput = document.getElementById('promoCodeInput');
+            const promoMessage = document.getElementById('promoMessage');
+            const code = promoCodeInput.value.trim();
+            
+            if (!code) {
+                promoMessage.textContent = 'Введите промокод';
+                promoMessage.className = 'promo-message error';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/promo/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Telegram-User-ID': currentUser.id.toString()
+                    },
+                    body: JSON.stringify({
+                        code: code
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.is_valid) {
+                    promoMessage.textContent = result.message;
+                    promoMessage.className = 'promo-message success';
+                    
+                    // Применяем промокод
+                    const applyResponse = await fetch(`${API_BASE}/promo/apply`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Telegram-User-ID': currentUser.id.toString()
+                        },
+                        body: JSON.stringify({
+                            code: code
+                        })
+                    });
+                    
+                    if (applyResponse.ok) {
+                        // Обновляем отображение скидки
+                        updatePromoDisplay(result);
+                    }
+                } else {
+                    promoMessage.textContent = result.message;
+                    promoMessage.className = 'promo-message error';
+                }
+            } catch (error) {
+                console.error('Error applying promo code:', error);
+                promoMessage.textContent = 'Ошибка применения промокода';
+                promoMessage.className = 'promo-message error';
+            }
+        }
+
+        function updatePromoDisplay(promoResult) {
+            const discountRow = document.getElementById('discountRow');
+            const discountAmount = document.getElementById('discountAmount');
+            const totalAmount = document.getElementById('totalAmount');
+            
+            if (promoResult.type === 'percent') {
+                const total = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
+                const discount = total * (promoResult.value / 100);
+                discountAmount.textContent = `-${discount.toFixed(0)} ₽`;
+                totalAmount.textContent = `${(total - discount).toFixed(0)} ₽`;
+            } else if (promoResult.type === 'fixed') {
+                discountAmount.textContent = `-${promoResult.value} ₽`;
+                const total = cartItems.reduce((sum, item) => sum + item.subtotal, 0);
+                totalAmount.textContent = `${Math.max(0, total - promoResult.value)} ₽`;
+            }
+            
+            discountRow.style.display = 'flex';
+        }
+
+        function startCheckout() {
+            // TODO: Implement checkout process
+            showSuccess('Оформление заказа в разработке...');
+        }
+    </script>
+</body>
+</html>
+</html>
